@@ -1,5 +1,5 @@
 from twisted.words.protocols import irc
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, ssl
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python import log
 from twisted.internet.endpoints import clientFromString
@@ -32,7 +32,7 @@ def main():
                 return None
 
         options = {}
-        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode" ]:
+        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl" ]:
             options[option] = get(option)
 
         mode = get("mode")
@@ -55,7 +55,10 @@ def main():
             factory = CommandFactory
 
         factory = factory(options)
-        reactor.connectTCP(options['host'], int(options['port']), factory, int(options['timeout']))
+        if options['ssl'] == "True":
+            reactor.connectSSL(options['host'], int(options['port']), factory, ssl.ClientContextFactory(), int(options['timeout']))
+        else:
+            reactor.connectTCP(options['host'], int(options['port']), factory, int(options['timeout']))
 
     reactor.callWhenRunning(signal, SIGINT, handler)
 
