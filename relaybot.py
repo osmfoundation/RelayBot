@@ -32,7 +32,7 @@ def main():
                 return None
 
         options = {}
-        for option in [ "timeout", "host", "port", "nick", "channel", "info", "heartbeat", "password", "username", "realname" ]:
+        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname" ]:
             options[option] = get(option)
 
         mode = get("mode")
@@ -90,7 +90,6 @@ class IRCRelayer(irc.IRCClient):
         self.channel = config['channel']
         self.nickname = config['nick']
         self.identifier = config['identifier']
-        self.privMsgResponse = config['info']
         self.heartbeatInterval = float(config['heartbeat'])
         self.username = config['username']
         self.realname = config['realname']
@@ -122,16 +121,11 @@ class IRCRelayer(irc.IRCClient):
         communicator.register(self)
 
     def privmsg(self, user, channel, message):
-        #If someone addresses the bot directly, respond in the same way.
+        # If someone addresses the bot directly, don't respond.
         if channel == self.nickname:
-            log.msg("Recieved privmsg from %s."%user)
-            self.msg(user, self.privMsgResponse)
+            log.msg("Recieved privmsg from %s: %s"%(user, message))
         else:
             self.relay("[%s] %s"%(self.formatUsername(user), message))
-            if message.startswith(self.nickname + ':'):
-                self.say(self.channel, self.privMsgResponse)
-                #For consistancy, if anyone responds to the bot's response:
-                self.relay("[%s] %s"%(self.formatUsername(self.nickname), self.privMsgResponse))
 
     def kickedFrom(self, channel, kicker, message):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))

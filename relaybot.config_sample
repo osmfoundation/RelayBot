@@ -7,8 +7,6 @@ channel=#a-bridged-channel
 nick=RelayBot
 #Can change to allow more specialized behavior.
 mode=Default
-#Response sent when addressed with <nickname>: or privmsg'd.
-info=This is a relay bot.
 username=RelayBot
 realname=Relay P. Botterson
 heartbeat=90
