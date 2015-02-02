@@ -38,7 +38,7 @@ def main():
                 return None
 
         options = {}
-        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint" ]:
+        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint", "silent" ]:
             options[option] = get(option)
 
         mode = get("mode")
@@ -207,6 +207,7 @@ class IRCRelayer(irc.IRCClient):
         self.username = config['username']
         self.realname = config['realname']
         self.mode = config['mode']
+        self.silent = config['silent']
         log.msg("IRC Relay created. Name: %s | Host: %s | Channel: %s"%(self.nickname, self.network, self.channel))
         # IRC RFC: https://tools.ietf.org/html/rfc2812#page-4
         if len(self.nickname) > 9:
@@ -255,20 +256,31 @@ class IRCRelayer(irc.IRCClient):
         communicator.unregister(self)
 
     def userJoined(self, user, channel):
-        self.relay("%s joined."%self.formatUsername(user))
+        if self.silent != "True":
+            self.relay("%s joined."%self.formatUsername(user))
+        else:
+            pass
 
     def userLeft(self, user, channel):
-        self.relay("%s left."%self.formatUsername(user))
+        if self.silent != "True":
+            self.relay("%s left."%self.formatUsername(user))
+        else:
+            pass
 
     def userQuit(self, user, quitMessage):
-        self.relay("%s quit. (%s)"%(self.formatUsername(user), quitMessage))
+        if self.silent != "True":
+            self.relay("%s quit. (%s)"%(self.formatUsername(user), quitMessage))
+        else:
+            pass
 
     def action(self, user, channel, data):
         self.relay("* %s %s"%(self.formatUsername(user), data))
 
     def userRenamed(self, oldname, newname):
-        self.relay("%s is now known as %s."%(self.formatUsername(oldname), self.formatUsername(newname)))
-
+        if self.silent != "True":
+            self.relay("%s is now known as %s."%(self.formatUsername(oldname), self.formatUsername(newname)))
+        else:
+            pass
 
 class RelayFactory(ReconnectingClientFactory):
     protocol = IRCRelayer
@@ -286,28 +298,15 @@ class RelayFactory(ReconnectingClientFactory):
         x.factory = self
         return x
 
-class SilentJoinPart(IRCRelayer):
-    def userJoined(self, user, channel):
-        pass
-
-    def userLeft(self, user, channel):
-        pass
-
-    def userQuit(self, user, quitMessage):
-        pass
-
-    def userRenamed(self, oldname, newname):
-        pass
-
 #Remove the _<numbers> that FLIP puts on the end of usernames.
-class FLIPRelayer(SilentJoinPart):
+class FLIPRelayer(IRCRelayer):
     def formatUsername(self, username):
         return re.sub("_\d+$", "", IRCRelayer.formatUsername(self, username))
 
 class FLIPFactory(RelayFactory):
     protocol = FLIPRelayer
 
-class NickServRelayer(SilentJoinPart):
+class NickServRelayer(IRCRelayer):
     NickServ = "nickserv"
     NickPollInterval = 30
 
@@ -366,7 +365,7 @@ class ReadOnlyRelayer(NickServRelayer):
     def sayToChannel(self, message):
         pass
 
-class CommandRelayer(SilentJoinPart):
+class CommandRelayer(IRCRelayer):
     pass
 
 class ReadOnlyFactory(RelayFactory):
