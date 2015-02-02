@@ -273,7 +273,10 @@ class IRCRelayer(irc.IRCClient):
             pass
 
     def action(self, user, channel, data):
-        self.relay("* %s %s"%(self.formatUsername(user), data))
+        if self.mode != "RelayByCommand":
+            self.relay("* %s %s"%(self.formatUsername(user), data))
+        else:
+            pass
 
     def userRenamed(self, oldname, newname):
         if self.silent != "True":
