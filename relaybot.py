@@ -245,13 +245,10 @@ class IRCRelayer(irc.IRCClient):
         if channel == self.nickname:
             log.msg("Recieved privmsg from %s: %s"%(user, message))
         else:
-            if message.startswith(self.nickname + ':'):
-                if self.mode == "RelayByCommand":
-                    self.relay("[%s%s%s] %s"%(self.colornick, self.formatUsername(user), self.colorend, self.formatMessage(message)))
-                else:
-                    self.relay("[%s%s%s] %s"%(self.colornick, self.formatUsername(self.nickname), self.colorend, message))
-            elif self.mode != "RelayByCommand":
+            if self.mode != "RelayByCommand":
                 self.relay("[%s%s%s] %s"%(self.colornick, self.formatUsername(user), self.colorend, message))
+            elif message.startswith(self.nickname + ':'):
+                self.relay("[%s%s%s] %s"%(self.colornick, self.formatUsername(user), self.colorend, self.formatMessage(message)))
 
     def kickedFrom(self, channel, kicker, message):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))
