@@ -32,7 +32,7 @@ def main():
                 return None
 
         options = {}
-        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname" ]:
+        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode" ]:
             options[option] = get(option)
 
         mode = get("mode")
@@ -50,6 +50,9 @@ def main():
         elif mode == "ReadOnly":
             factory = ReadOnlyFactory
             options["nickServPassword"] = get("nickServPassword")
+        # RelayByCommand: only messages with <nickname>: will be relayed. 
+        elif mode == "RelayByCommand":
+            factory = CommandFactory
 
         factory = factory(options)
         reactor.connectTCP(options['host'], int(options['port']), factory, int(options['timeout']))
@@ -93,6 +96,7 @@ class IRCRelayer(irc.IRCClient):
         self.heartbeatInterval = float(config['heartbeat'])
         self.username = config['username']
         self.realname = config['realname']
+        self.mode = config['mode']
         log.msg("IRC Relay created. Name: %s | Host: %s | Channel: %s"%(self.nickname, self.network, self.channel))
         # IRC RFC: https://tools.ietf.org/html/rfc2812#page-4
         if len(self.nickname) > 9:
@@ -125,7 +129,13 @@ class IRCRelayer(irc.IRCClient):
         if channel == self.nickname:
             log.msg("Recieved privmsg from %s: %s"%(user, message))
         else:
-            self.relay("[%s] %s"%(self.formatUsername(user), message))
+            if message.startswith(self.nickname + ':'):
+                if self.mode == "RelayByCommand":
+                    self.relay("[%s] %s"%(self.formatUsername(user), message))
+                else:
+                    self.relay("[%s] %s"%(self.formatUsername(self.nickname), message))
+            elif self.mode != "RelayByCommand":
+                self.relay("[%s] %s"%(self.formatUsername(user), message))
 
     def kickedFrom(self, channel, kicker, message):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))
@@ -243,11 +253,17 @@ class ReadOnlyRelayer(NickServRelayer):
     def sayToChannel(self, message):
         pass
 
+class CommandRelayer(SilentJoinPart):
+    pass
+
 class ReadOnlyFactory(RelayFactory):
     protocol = ReadOnlyRelayer
 
 class NickServFactory(RelayFactory):
     protocol = NickServRelayer
+
+class CommandFactory(RelayFactory):
+    protocol = CommandRelayer
 
 def handler(signum, frame):
     reactor.stop()
