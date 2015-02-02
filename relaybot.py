@@ -234,6 +234,9 @@ class IRCRelayer(irc.IRCClient):
         log.msg("Joined channel %s, registering."%channel)
         communicator.register(self)
 
+    def formatMessage(self, message):
+        return message.split(self.nickname + ': ', 1)[1]
+
     def privmsg(self, user, channel, message):
         # If someone addresses the bot directly, don't respond.
         if channel == self.nickname:
@@ -241,7 +244,7 @@ class IRCRelayer(irc.IRCClient):
         else:
             if message.startswith(self.nickname + ':'):
                 if self.mode == "RelayByCommand":
-                    self.relay("[%s] %s"%(self.formatUsername(user), message))
+                    self.relay("[%s] %s"%(self.formatUsername(user), self.formatMessage(message)))
                 else:
                     self.relay("[%s] %s"%(self.formatUsername(self.nickname), message))
             elif self.mode != "RelayByCommand":
