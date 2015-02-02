@@ -208,6 +208,8 @@ class IRCRelayer(irc.IRCClient):
         self.realname = config['realname']
         self.mode = config['mode']
         self.silent = config['silent']
+        self.colornick = "\x0303"
+        self.colorend = "\x03"
         log.msg("IRC Relay created. Name: %s | Host: %s | Channel: %s"%(self.nickname, self.network, self.channel))
         # IRC RFC: https://tools.ietf.org/html/rfc2812#page-4
         if len(self.nickname) > 9:
@@ -245,11 +247,11 @@ class IRCRelayer(irc.IRCClient):
         else:
             if message.startswith(self.nickname + ':'):
                 if self.mode == "RelayByCommand":
-                    self.relay("[%s] %s"%(self.formatUsername(user), self.formatMessage(message)))
+                    self.relay("[%s%s%s] %s"%(self.colornick, self.formatUsername(user), self.colorend, self.formatMessage(message)))
                 else:
-                    self.relay("[%s] %s"%(self.formatUsername(self.nickname), message))
+                    self.relay("[%s%s%s] %s"%(self.colornick, self.formatUsername(self.nickname), self.colorend, message))
             elif self.mode != "RelayByCommand":
-                self.relay("[%s] %s"%(self.formatUsername(user), message))
+                self.relay("[%s%s%s] %s"%(self.colornick, self.formatUsername(user), self.colorend, message))
 
     def kickedFrom(self, channel, kicker, message):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))
