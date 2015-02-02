@@ -278,7 +278,7 @@ class RelayFactory(ReconnectingClientFactory):
 
     def buildProtocol(self, addr):
         #Connected - reset reconnect attempt delay.
-        self.resetDelay()
+        self.maxDelay = 900
         x = self.protocol(self.config)
         x.factory = self
         return x
