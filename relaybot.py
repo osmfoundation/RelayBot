@@ -245,14 +245,10 @@ class IRCRelayer(irc.IRCClient):
         return nick
 
     def privmsg(self, user, channel, message):
-        # If someone addresses the bot directly, don't respond.
-        if channel == self.nickname:
-            log.msg("Recieved privmsg from %s: %s"%(user, message))
-        else:
-            if self.mode != "RelayByCommand":
-                self.relay("%s %s"%(self.formatNick(user), message))
-            elif message.startswith(self.nickname + ':'):
-                self.relay("%s %s"%(self.formatNick(user), self.formatMessage(message)))
+        if self.mode != "RelayByCommand":
+            self.relay("%s %s"%(self.formatNick(user), message))
+        elif message.startswith(self.nickname + ':'):
+            self.relay("%s %s"%(self.formatNick(user), self.formatMessage(message)))
 
     def kickedFrom(self, channel, kicker, message):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))
