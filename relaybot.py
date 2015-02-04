@@ -38,7 +38,7 @@ def main():
                 return None
 
         options = {}
-        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint" ]:
+        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint", "nickcolor" ]:
             options[option] = get(option)
 
         mode = get("mode")
@@ -207,8 +207,7 @@ class IRCRelayer(irc.IRCClient):
         self.username = config['username']
         self.realname = config['realname']
         self.mode = config['mode']
-        self.colornick = "\x0303"
-        self.colorend = "\x03"
+        self.nickcolor = config['nickcolor']
         log.msg("IRC Relay created. Name: %s | Host: %s | Channel: %s"%(self.nickname, self.network, self.channel))
         # IRC RFC: https://tools.ietf.org/html/rfc2812#page-4
         if len(self.nickname) > 9:
@@ -239,15 +238,21 @@ class IRCRelayer(irc.IRCClient):
     def formatMessage(self, message):
         return message.split(self.nickname + ': ', 1)[1]
 
+    def formatNick(self, user):
+        nick = "[" + self.formatUsername(user) + "]"
+        if self.nickcolor == "True":
+            nick = "[\x0303" + self.formatUsername(user) + "\x03]"
+        return nick
+
     def privmsg(self, user, channel, message):
         # If someone addresses the bot directly, don't respond.
         if channel == self.nickname:
             log.msg("Recieved privmsg from %s: %s"%(user, message))
         else:
             if self.mode != "RelayByCommand":
-                self.relay("[%s%s%s] %s"%(self.colornick, self.formatUsername(user), self.colorend, message))
+                self.relay("%s %s"%(self.formatNick(user), message))
             elif message.startswith(self.nickname + ':'):
-                self.relay("[%s%s%s] %s"%(self.colornick, self.formatUsername(user), self.colorend, self.formatMessage(message)))
+                self.relay("%s %s"%(self.formatNick(user), self.formatMessage(message)))
 
     def kickedFrom(self, channel, kicker, message):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))

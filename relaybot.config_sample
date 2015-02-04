@@ -10,6 +10,7 @@ mode=Default
 username=unit22
 realname=Bender Bending Rodríguez
 heartbeat=90
+nickcolor=True
 
 [Freenode]
 host=irc.freenode.net
