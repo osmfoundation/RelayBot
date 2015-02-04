@@ -38,7 +38,7 @@ def main():
                 return None
 
         options = {}
-        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint", "silent" ]:
+        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint" ]:
             options[option] = get(option)
 
         mode = get("mode")
@@ -207,7 +207,6 @@ class IRCRelayer(irc.IRCClient):
         self.username = config['username']
         self.realname = config['realname']
         self.mode = config['mode']
-        self.silent = config['silent']
         self.colornick = "\x0303"
         self.colorend = "\x03"
         log.msg("IRC Relay created. Name: %s | Host: %s | Channel: %s"%(self.nickname, self.network, self.channel))
@@ -254,33 +253,9 @@ class IRCRelayer(irc.IRCClient):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))
         communicator.unregister(self)
 
-    def userJoined(self, user, channel):
-        if self.silent != "True":
-            self.relay("%s joined."%self.formatUsername(user))
-        else:
-            pass
-
-    def userLeft(self, user, channel):
-        if self.silent != "True":
-            self.relay("%s left."%self.formatUsername(user))
-        else:
-            pass
-
-    def userQuit(self, user, quitMessage):
-        if self.silent != "True":
-            self.relay("%s quit. (%s)"%(self.formatUsername(user), quitMessage))
-        else:
-            pass
-
     def action(self, user, channel, data):
         if self.mode != "RelayByCommand":
             self.relay("* %s %s"%(self.formatUsername(user), data))
-        else:
-            pass
-
-    def userRenamed(self, oldname, newname):
-        if self.silent != "True":
-            self.relay("%s is now known as %s."%(self.formatUsername(oldname), self.formatUsername(newname)))
         else:
             pass
 
