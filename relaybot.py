@@ -253,9 +253,7 @@ class IRCRelayer(irc.IRCClient):
 
     def action(self, user, channel, data):
         if self.mode != "RelayByCommand":
-            self.relay("* %s %s"%(self.formatUsername(user), data))
-        else:
-            pass
+            self.relay(":%s PRIVMSG %s :%s %s"%(user, channel, self.formatNick(user), message))
 
 class RelayFactory(ReconnectingClientFactory):
     protocol = IRCRelayer
