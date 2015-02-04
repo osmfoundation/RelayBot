@@ -261,9 +261,8 @@ class IRCRelayer(irc.IRCClient):
             self.topic(user, channel, newTopic)
 
     def topic(self, user, channel, newTopic):
-        if self.synctopic != "True":
-            if self.mode != "RelayByCommand":
-                self.relay(":%s TOPIC %s :%s" %(user, channel, newTopic))
+        if self.synctopic == "True":
+            self.relay(":%s TOPIC %s :%s" %(user, channel, newTopic))
 
 class RelayFactory(ReconnectingClientFactory):
     protocol = IRCRelayer
