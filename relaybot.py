@@ -38,7 +38,7 @@ def main():
                 return None
 
         options = {}
-        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint", "nickcolor", "synctopic" ]:
+        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint", "nickcolor", "topicsync" ]:
             options[option] = get(option)
 
         mode = get("mode")
@@ -208,7 +208,7 @@ class IRCRelayer(irc.IRCClient):
         self.realname = config['realname']
         self.mode = config['mode']
         self.nickcolor = config['nickcolor']
-        self.synctopic = config['synctopic']
+        self.topicsync = config['topicsync']
         log.msg("IRC Relay created. Name: %s | Host: %s | Channel: %s"%(self.nickname, self.network, self.channel))
         # IRC RFC: https://tools.ietf.org/html/rfc2812#page-4
         if len(self.nickname) > 9:
@@ -261,7 +261,7 @@ class IRCRelayer(irc.IRCClient):
             self.topic(user, channel, newTopic)
 
     def topic(self, user, channel, newTopic):
-        if self.synctopic == "True":
+        if self.topicsync == "True":
             self.relay(":%s TOPIC %s :%s" %(user, channel, newTopic))
 
 class RelayFactory(ReconnectingClientFactory):
