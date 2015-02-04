@@ -236,7 +236,7 @@ class IRCRelayer(irc.IRCClient):
         communicator.register(self)
 
     def formatMessage(self, message):
-        return message.split(self.nickname + ': ', 1)[1]
+        return message.lstrip(self.nickname + ": ")
 
     def formatNick(self, user):
         nick = "[" + self.formatUsername(user) + "]"
