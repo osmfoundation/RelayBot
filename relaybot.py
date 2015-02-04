@@ -190,7 +190,7 @@ class Communicator:
             if identifier == protocol.identifier:
                 continue
             instance = self.protocolInstances[identifier]
-            instance.sayToChannel(message)
+            instance.sendLine(message)
 
 #Global scope: all protocol instances will need this.
 communicator = Communicator()
@@ -228,9 +228,6 @@ class IRCRelayer(irc.IRCClient):
         log.msg("[%s] Connection lost, unregistering."%self.network)
         communicator.unregister(self)
 
-    def sayToChannel(self, message):
-        self.say(self.channel, message)
-
     def joined(self, channel):
         log.msg("Joined channel %s, registering."%channel)
         communicator.register(self)
@@ -246,9 +243,9 @@ class IRCRelayer(irc.IRCClient):
 
     def privmsg(self, user, channel, message):
         if self.mode != "RelayByCommand":
-            self.relay("%s %s"%(self.formatNick(user), message))
+            self.relay(":%s PRIVMSG %s :%s %s"%(user, channel, self.formatNick(user), message))
         elif message.startswith(self.nickname + ':'):
-            self.relay("%s %s"%(self.formatNick(user), self.formatMessage(message)))
+            self.relay(":%s PRIVMSG %s :%s %s"%(user, channel, self.formatNick(user), self.formatMessage(message)))
 
     def kickedFrom(self, channel, kicker, message):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))
@@ -340,8 +337,7 @@ class NickServRelayer(IRCRelayer):
         self.nickPoll = LoopingCall(self.regainNickPoll)
 
 class ReadOnlyRelayer(NickServRelayer):
-    def sayToChannel(self, message):
-        pass
+    pass
 
 class CommandRelayer(IRCRelayer):
     pass
