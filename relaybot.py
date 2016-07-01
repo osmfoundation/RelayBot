@@ -37,7 +37,7 @@ def main():
             else:
                 return None
 
-        options = {}
+        options = {'servername': section}
         for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint", "nickcolor", "topicsync" ]:
             options[option] = get(option)
 
@@ -198,6 +198,7 @@ communicator = Communicator()
 class IRCRelayer(irc.IRCClient):
 
     def __init__(self, config):
+        self.servername = config['servername']
         self.network = config['host']
         self.password = config['password']
         self.channel = config['channel']
@@ -237,9 +238,9 @@ class IRCRelayer(irc.IRCClient):
         return message.replace(self.nickname + ": ", "", 1)
 
     def formatNick(self, user):
-        nick = "[" + self.formatUsername(user) + "]"
+        nick = "[" + self.servername + "/" + self.formatUsername(user) + "]"
         if self.nickcolor == "True":
-            nick = "[\x0303" + self.formatUsername(user) + "\x03]"
+            nick = "[" + self.servername + "/\x0303" + self.formatUsername(user) + "\x03]"
         return nick
 
     def privmsg(self, user, channel, message):
