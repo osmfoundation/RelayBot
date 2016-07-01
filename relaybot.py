@@ -190,7 +190,14 @@ class Communicator:
             if identifier == protocol.identifier:
                 continue
             instance = self.protocolInstances[identifier]
-            instance.sendLine(message)
+            instance.sayToChannel(message)
+
+    def relayTopic(self, protocol, newTopic):
+        for identifier in self.protocolInstances.keys():
+            if identifier == protocol.identifier:
+                continue
+            instance = self.protocolInstances[identifier]
+            instance.setChannelTopic(newTopic)
 
 #Global scope: all protocol instances will need this.
 communicator = Communicator()
@@ -221,6 +228,9 @@ class IRCRelayer(irc.IRCClient):
     def relay(self, message):
         communicator.relay(self, message)
 
+    def relayTopic(self, newTopic):
+        communicator.relayTopic(self, newTopic)
+
     def signedOn(self):
         log.msg("[%s] Connected to network."%self.network)
         self.startHeartbeat()
@@ -229,6 +239,12 @@ class IRCRelayer(irc.IRCClient):
     def connectionLost(self, reason):
         log.msg("[%s] Connection lost, unregistering."%self.network)
         communicator.unregister(self)
+
+    def sayToChannel(self, message):
+        self.say(self.channel, message)
+
+    def setChannelTopic(self, newTopic):
+        self.topic(self.channel, newTopic)
 
     def joined(self, channel):
         log.msg("Joined channel %s, registering."%channel)
@@ -245,9 +261,9 @@ class IRCRelayer(irc.IRCClient):
 
     def privmsg(self, user, channel, message):
         if self.mode != "RelayByCommand":
-            self.relay(":%s PRIVMSG %s :%s %s"%(user, channel, self.formatNick(user), message))
+            self.relay("%s %s"%(self.formatNick(user), message))
         elif message.startswith(self.nickname + ':'):
-            self.relay(":%s PRIVMSG %s :%s %s"%(user, channel, self.formatNick(user), self.formatMessage(message)))
+            self.relay("%s %s"%(self.formatNick(user), self.formatMessage(message)))
 
     def kickedFrom(self, channel, kicker, message):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))
@@ -255,7 +271,7 @@ class IRCRelayer(irc.IRCClient):
 
     def action(self, user, channel, message):
         if self.mode != "RelayByCommand":
-            self.relay(":%s PRIVMSG %s :%s %s"%(user, channel, self.formatNick(user), message))
+            self.relay("%s %s"%(self.formatNick(user), message))
 
     def topicUpdated(self, user, channel, newTopic):
         if self.mode != "RelayByCommand":
@@ -263,7 +279,7 @@ class IRCRelayer(irc.IRCClient):
 
     def topic(self, user, channel, newTopic):
         if self.topicsync == "True":
-            self.relay(":%s TOPIC %s :%s" %(user, channel, newTopic))
+            self.relayTopic(newTopic)
 
 class RelayFactory(ReconnectingClientFactory):
     protocol = IRCRelayer
