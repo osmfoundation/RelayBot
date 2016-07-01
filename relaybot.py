@@ -344,7 +344,7 @@ class NickServRelayer(IRCRelayer):
         #Identify with nickserv if requested
         if IRCRelayer.formatUsername(self, user).lower() == NickServRelayer.NickServ:
             msg = message.lower()
-            if msg.startswith("this nickname is registered and protected"):
+            if msg.startswith("this nickname is registered"):
                 log.msg("[%s] Password requested; identifying with %s."%(self.network, NickServRelayer.NickServ))
                 self.msg(NickServRelayer.NickServ, "IDENTIFY %s"%self.password)
             elif msg == "ghost with your nickname has been killed." or msg == "ghost with your nick has been killed.":
