@@ -7,7 +7,7 @@ from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.defer import Deferred
 from twisted.internet.task import LoopingCall
 from twisted.application import service
-from twisted.python.hashlib import md5
+from hashlib import md5
 from OpenSSL import SSL, crypto
 from signal import signal, SIGINT
 from ConfigParser import SafeConfigParser
