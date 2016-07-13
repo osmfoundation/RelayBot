@@ -3,7 +3,8 @@
 #Twisted's default is 30 seconds.
 timeout=120
 port=6667
-channel=#swarm
+#A single channel to join, or a list of channels: #a-bridged-channel,#some-other-channel
+channels=#swarm
 nick=Bender
 #Can change to allow more specialized behavior.
 mode=Default

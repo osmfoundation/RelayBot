@@ -38,7 +38,7 @@ def main():
                 return None
 
         options = {'servername': section}
-        for option in [ "timeout", "host", "port", "nick", "channel", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint", "nickcolor", "topicsync" ]:
+        for option in [ "timeout", "host", "port", "nick", "channel", "channels", "heartbeat", "password", "username", "realname", "mode", "ssl", "fingerprint", "nickcolor", "topicsync" ]:
             options[option] = get(option)
 
         mode = get("mode")
@@ -185,19 +185,19 @@ class Communicator:
             return
         del self.protocolInstances[protocol.identifier]
 
-    def relay(self, protocol, message):
+    def relay(self, protocol, channel, message):
         for identifier in self.protocolInstances.keys():
             if identifier == protocol.identifier:
                 continue
             instance = self.protocolInstances[identifier]
-            instance.sayToChannel(message)
+            instance.say(channel, message)
 
-    def relayTopic(self, protocol, newTopic):
+    def relayTopic(self, protocol, channel, newTopic):
         for identifier in self.protocolInstances.keys():
             if identifier == protocol.identifier:
                 continue
             instance = self.protocolInstances[identifier]
-            instance.setChannelTopic(newTopic)
+            instance.topic(channel, newTopic)
 
 #Global scope: all protocol instances will need this.
 communicator = Communicator()
@@ -208,7 +208,7 @@ class IRCRelayer(irc.IRCClient):
         self.servername = config['servername']
         self.network = config['host']
         self.password = config['password']
-        self.channel = config['channel']
+        self.channels = config['channels']
         self.nickname = config['nick']
         self.identifier = config['identifier']
         self.heartbeatInterval = float(config['heartbeat'])
@@ -217,34 +217,43 @@ class IRCRelayer(irc.IRCClient):
         self.mode = config['mode']
         self.nickcolor = config['nickcolor']
         self.topicsync = config['topicsync']
-        log.msg("IRC Relay created. Name: %s | Host: %s | Channel: %s"%(self.nickname, self.network, self.channel))
+
         # IRC RFC: https://tools.ietf.org/html/rfc2812#page-4
         if len(self.nickname) > 9:
             log.msg("Nickname %s is %d characters long, which exceeds the RFC maximum of 9 characters. This may cause connection problems."%(self.nickname, len(self.nickname)))
 
+        # Backward compatibility with deprecated single-channel setting
+        if not self.channels:
+            self.channels = config['channel']
+
+        # Read comma separated string as list
+        self.channels = [channel.strip() for channel in self.channels.split(',')]
+        log.msg("IRC Relay created. Name: %s | Host: %s | Channels: %s" % (
+            self.nickname, self.network, ",".join(self.channels)))
+
     def formatUsername(self, username):
         return username.split("!")[0]
 
-    def relay(self, message):
-        communicator.relay(self, message)
+    def relay(self, channel, message):
+        communicator.relay(self, channel, message)
 
-    def relayTopic(self, newTopic):
-        communicator.relayTopic(self, newTopic)
+    def relayTopic(self, channel, newTopic):
+        communicator.relayTopic(self, channel, newTopic)
+
+    def joinChannel(self, channel):
+        self.join(channel, "")
+
+    def joinChannels(self):
+        [self.joinChannel(channel) for channel in self.channels]
 
     def signedOn(self):
         log.msg("[%s] Connected to network."%self.network)
         self.startHeartbeat()
-        self.join(self.channel, "")
+        self.joinChannels()
 
     def connectionLost(self, reason):
         log.msg("[%s] Connection lost, unregistering."%self.network)
         communicator.unregister(self)
-
-    def sayToChannel(self, message):
-        self.say(self.channel, message)
-
-    def setChannelTopic(self, newTopic):
-        self.topic(self.channel, newTopic)
 
     def joined(self, channel):
         log.msg("Joined channel %s, registering."%channel)
@@ -261,9 +270,9 @@ class IRCRelayer(irc.IRCClient):
 
     def privmsg(self, user, channel, message):
         if self.mode != "RelayByCommand":
-            self.relay("%s %s"%(self.formatNick(user), message))
+            self.relay(channel, "%s %s"%(self.formatNick(user), message))
         elif message.startswith(self.nickname + ':'):
-            self.relay("%s %s"%(self.formatNick(user), self.formatMessage(message)))
+            self.relay(channel, "%s %s"%(self.formatNick(user), self.formatMessage(message)))
 
     def kickedFrom(self, channel, kicker, message):
         log.msg("Kicked by %s. Message \"%s\""%(kicker, message))
@@ -271,7 +280,7 @@ class IRCRelayer(irc.IRCClient):
 
     def action(self, user, channel, message):
         if self.mode != "RelayByCommand":
-            self.relay("%s %s"%(self.formatNick(user), message))
+            self.relay(channel, "%s %s"%(self.formatNick(user), message))
 
     def topicUpdated(self, user, channel, newTopic):
         if self.mode != "RelayByCommand":
@@ -279,7 +288,7 @@ class IRCRelayer(irc.IRCClient):
 
     def topic(self, user, channel, newTopic):
         if self.topicsync == "True":
-            self.relayTopic(newTopic)
+            self.relayTopic(channel, newTopic)
 
 class RelayFactory(ReconnectingClientFactory):
     protocol = IRCRelayer
@@ -312,7 +321,7 @@ class NickServRelayer(IRCRelayer):
     def signedOn(self):
         log.msg("[%s] Connected to network."%self.network)
         self.startHeartbeat()
-        self.join(self.channel, "")
+        self.joinChannels()
         self.checkDesiredNick()
 
     def checkDesiredNick(self):
