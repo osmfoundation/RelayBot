@@ -1,17 +1,19 @@
 from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol, ssl
-from twisted.internet.protocol import ReconnectingClientFactory
+from twisted.internet.protocol import ReconnectingClientFactory, ServerFactory
 from twisted.python import log, reflect, util
-from twisted.internet.endpoints import clientFromString
+from twisted.internet.endpoints import clientFromString, serverFromString
 from twisted.internet.error import VerifyError, CertificateError
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, succeed
 from twisted.internet.task import LoopingCall
 from twisted.application import service
+from twisted.web import client, http_headers, iweb, resource, server
+from zope.interface import implementer
 from hashlib import md5
 from OpenSSL import SSL, crypto
 from signal import signal, SIGINT
 from ConfigParser import SafeConfigParser
-import re, sys, itertools
+import re, sys, itertools, json
 
 #
 # RelayBot is a derivative of http://code.google.com/p/relaybot/
@@ -28,6 +30,11 @@ def main():
     config = SafeConfigParser()
     config.read("relaybot.config")
     defaults = config.defaults()
+
+    # Webhook stuff
+    webhooks = resource.Resource()
+    pool = client.HTTPConnectionPool(reactor)
+    agent = client.Agent(reactor, pool=pool)
 
     for section in config.sections():
 
@@ -59,6 +66,11 @@ def main():
         # RelayByCommand: only messages with <nickname>: will be relayed. 
         elif mode == "RelayByCommand":
             factory = CommandFactory
+        elif mode == "Webhooks":
+            options['webhookNonce'] = get('webhookNonce')
+            options['outgoingWebhook'] = get('outgoingWebhook')
+            webhooks.putChild(options['webhookNonce'], Webhook(agent, options))
+            continue
 
         factory = factory(options)
         if options['ssl'] == "True":
@@ -69,6 +81,10 @@ def main():
                 reactor.connectSSL(options['host'], int(options['port']), factory, ssl.ClientContextFactory(), int(options['timeout']))
         else:
             reactor.connectTCP(options['host'], int(options['port']), factory, int(options['timeout']))
+
+    # Start incoming webhook server
+    if 'webhook' in defaults:
+        serverFromString(reactor, defaults['webhook']).listen(server.Site(webhooks))
 
     reactor.callWhenRunning(signal, SIGINT, handler)
 
@@ -383,6 +399,87 @@ class NickServFactory(RelayFactory):
 
 class CommandFactory(RelayFactory):
     protocol = CommandRelayer
+
+@implementer(iweb.IBodyProducer)
+class StringProducer(object):
+    def __init__(self, body):
+        self.body = body
+        self.length = len(body)
+
+    def startProducing(self, consumer):
+        consumer.write(self.body)
+        return succeed(None)
+
+    def pauseProducing(self):
+        pass
+
+    def stopProducing(self):
+        pass
+
+class Webhook(resource.Resource):
+    def __init__(self, agent, config):
+        self.agent = agent
+        self.servername = config['servername']
+        self.identifier = 'Webhook:%s' % config['webhookNonce']
+        self.outgoingWebhook = config['outgoingWebhook']
+        self.nickcolor = config['nickcolor']
+
+        communicator.register(self)
+
+    def render_POST(self, request):
+        """
+        Process the contents of a request (i.e. a post from Rocket.Chat's
+        webhook service)
+        """
+        action = request.getHeader("X-IRC-Action")
+        obj = json.loads(request.content.read())
+
+        if action == 'say':
+            user = str(obj['username'])
+            channel = str(obj['channel'])
+            message = str(obj['message'])
+            self.relay(channel, "%s %s"%(self.formatNick(user), message))
+
+    def formatUsername(self, username):
+        return username.split("!")[0]
+
+    def formatNick(self, user):
+        nick = "[" + self.servername + "/" + self.formatUsername(user) + "]"
+        if self.nickcolor == "True":
+            nick = "[" + self.servername + "/\x0303" + self.formatUsername(user) + "\x03]"
+        return nick
+
+    def relay(self, channel, message):
+        communicator.relay(self, channel, message)
+
+    def relayTopic(self, channel, newTopic):
+        communicator.relayTopic(self, channel, newTopic)
+
+    def post(self, action, user, channel, message):
+        obj = {
+            'username': user,
+            'channel': channel,
+            'message': message,
+        }
+        d = self.agent.request(
+            'POST',
+            self.outgoingWebhook,
+            http_headers.Headers({
+                'Content-Type': ['application/json'],
+                'X-IRC-Action': [action],
+            }),
+            StringProducer(json.dumps(obj)))
+        def cbResponse(response):
+            log.msg('Outgoing webhook response: %d' % response.code)
+        d.addCallback(cbResponse)
+
+    def say(self, channel, message, length=None):
+        if self.outgoingWebhook:
+            user, msg = message.split(' ', 1)
+            self.post('say', user, channel, msg)
+
+    def topic(self, user, channel, newTopic):
+        pass
 
 def handler(signum, frame):
     reactor.stop()

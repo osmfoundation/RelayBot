@@ -13,6 +13,7 @@ realname=Bender Bending Rodríguez
 heartbeat=90
 nickcolor=True
 topicsync=True
+webhook=tcp:12345
 
 [Freenode]
 host=irc.freenode.net
@@ -27,3 +28,8 @@ port=6697
 ssl=True
 fingerprint=9A:AB:25:1F:96:DA:CB:BA:AF:F5:A4:9B:6E:76:BC:9F:28:89:6F:83
 mode=RelayByCommand
+
+[Rocket.Chat]
+mode=Webhooks
+webhookNonce=2vj5gT6TCyVDxQV9WWEiARGxk5YcHi9m
+outgoingWebhook=https://example.com/hooks/Ncf882rgCtAgn1gt3iT7jsVZqt84b8QV
