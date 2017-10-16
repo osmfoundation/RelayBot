@@ -188,9 +188,11 @@ class certoptions(object):
 class Communicator:
     def __init__(self):
         self.protocolInstances = {}
+        self.channels = {}
 
-    def register(self, protocol):
+    def register(self, protocol, channel):
         self.protocolInstances[protocol.identifier] = protocol
+        self.channels[protocol.identifier] = channel
 
     def isRegistered(self, protocol):
         return protocol.identifier in self.protocolInstances
@@ -206,7 +208,8 @@ class Communicator:
             if identifier == protocol.identifier:
                 continue
             instance = self.protocolInstances[identifier]
-            instance.say(channel, message)
+            #log.msg("say %s on %s" % (instance, message))
+            instance.say(self.channels[identifier], message)
 
     def relayTopic(self, protocol, channel, newTopic):
         for identifier in self.protocolInstances.keys():
@@ -251,7 +254,9 @@ class IRCRelayer(irc.IRCClient):
         return username.split("!")[0]
 
     def relay(self, channel, message):
-        communicator.relay(self, channel, message)
+        #log.msg("IRCRelayer relay: %s - %s" % (channel, message))
+        if ((channel == "#osmf-board") or (channel == "#board")):
+            communicator.relay(self, channel, message)
 
     def relayTopic(self, channel, newTopic):
         communicator.relayTopic(self, channel, newTopic)
@@ -272,8 +277,9 @@ class IRCRelayer(irc.IRCClient):
         communicator.unregister(self)
 
     def joined(self, channel):
-        log.msg("Joined channel %s, registering."%channel)
-        communicator.register(self)
+        if ((channel == "#osmf-board") or (channel == "#board")):
+            log.msg("Joined channel %s, registering."%channel)
+            communicator.register(self, channel)
 
     def formatMessage(self, message):
         return message.replace(self.nickname + ": ", "", 1)

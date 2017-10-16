@@ -1,3 +1,7 @@
+(This fork has been butchered for use as a gateway between an IRC channel
+and the Slack IRC interface. Channel names have been hardcoded because
+the butcher had only basic Python foo. Do not use as-is.)
+
 # RelayBot
 
 A two-way IRC bridge bot for bridging multiple arbitrary IRC channels. It is written in Python and uses [Twisted](http://twistedmatrix.com/trac/). It is based off of [relaybot](http://code.google.com/p/relaybot/), and aims to be less complicated by doing less.

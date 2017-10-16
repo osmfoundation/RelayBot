@@ -1,4 +1,6 @@
 #!/bin/bash
+
+cd /home/fred/RelayBot
 if [ "X`id -u`" = "X0" -a -z "$RUN_AS_USER" ]
 then
     echo "Do not run this script as root."
@@ -6,7 +8,11 @@ then
 fi
 
 start() {
-    twistd --python=relaybot.py --logfile=relaybot.log --pidfile=relaybot.pid
+    ~/.local/bin/twistd --python=relaybot.py --logfile=relaybot.log --pidfile=relaybot.pid
+}
+
+startifnotrunning() {
+    kill -0 `cat relaybot.pid` || start
 }
 
 stop() {
@@ -14,6 +20,10 @@ stop() {
 }
 
 case "$1" in
+    'startifnotrunning')
+        startifnotrunning
+        ;;
+
     'start')
         start
         ;;
